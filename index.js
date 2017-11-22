@@ -74,16 +74,6 @@ class Auth {
         stripe: {}
         */
       },
-      catchError: async (ctx, next) => {
-        try {
-          await next();
-        } catch (err) {
-          if (err.message === 'Consent required')
-            return ctx.redirect('/auth/google/consent');
-          ctx.flash('error', err.message);
-          ctx.redirect('/login');
-        }
-      },
       callbackOpts: {
         successReturnToOrRedirect: '/',
         failureRedirect: '/login',
