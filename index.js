@@ -92,20 +92,20 @@ class Auth {
 
     // check if we have third party providers enabled
     this.config.hasThirdPartyProviders = _.some(
-      config.auth.providers,
+      this.config.providers,
       bool => bool
     );
 
     passport.serializeUser(this.config.serializeUser);
     passport.deserializeUser(this.config.deserializeUser);
 
-    if (config.auth.local && _.isFunction(Users.createStrategy))
+    if (this.config.providers.local && _.isFunction(Users.createStrategy))
       passport.use(Users.createStrategy());
 
-    if (config.auth.providers.google)
+    if (this.config.providers.google)
       passport.use(
         new OAuth2Strategy(
-          config.auth.strategies.google,
+          this.config.strategies.google,
           async (accessToken, refreshToken, profile, done) => {
             const email = profile.emails[0].value;
 
