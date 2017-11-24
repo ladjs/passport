@@ -23,18 +23,18 @@
   },
   "devDependencies": {
     "auto-bind": "^1.1.0",
-    "ava": "^0.22.0",
-    "codecov": "^2.3.0",
+    "ava": "^0.23.0",
+    "codecov": "^3.0.0",
     "cross-env": "^5.0.5",
     "eslint": "^4.5.0",
     "eslint-config-prettier": "^2.3.0",
     "eslint-plugin-prettier": "^2.2.0",
     "husky": "^0.14.3",
-    "lint-staged": "^4.0.4",
+    "lint-staged": "^5.0.0",
     "nyc": "^11.1.0",
     "prettier": "^1.6.1",
     "remark-cli": "^4.0.0",
-    "remark-preset-github": "^0.0.6",
+    "remark-preset-github": "^0.0.7",
     "xo": "^0.19.0"
   },
   "engines": {
