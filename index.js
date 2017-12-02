@@ -55,12 +55,6 @@ class Auth {
         stripe: {}
         */
       },
-      callbackOpts: {
-        successReturnToOrRedirect: '/',
-        failureRedirect: '/login',
-        successFlash: true,
-        failureFlash: true
-      },
       google: {
         accessType: 'offline',
         approvalPrompt: 'force',
@@ -70,12 +64,6 @@ class Auth {
         ]
       }
     });
-
-    // check if we have third party providers enabled
-    this.config.hasThirdPartyProviders = _.some(
-      this.config.providers,
-      bool => bool
-    );
 
     passport.serializeUser(this.config.serializeUser);
     passport.deserializeUser(this.config.deserializeUser);
