@@ -3,7 +3,6 @@ const passport = require('koa-passport');
 const _ = require('lodash');
 const { OAuth2Strategy } = require('passport-google-oauth');
 const boolean = require('boolean');
-const strength = require('strength');
 
 class Auth {
   constructor(Users, config) {
@@ -38,24 +37,6 @@ class Auth {
         */
       },
       strategies: {
-        local: {
-          usernameField: 'email',
-          passwordField: 'password',
-          usernameLowerCase: true,
-          limitAttempts: true,
-          maxAttempts:
-            process.env.NODE_ENV === 'development' ? Number.MAX_VALUE : 5,
-          digestAlgorithm: 'sha256',
-          encoding: 'hex',
-          saltlen: 32,
-          iterations: 25000,
-          keylen: 512,
-          passwordValidator: (password, cb) => {
-            if (process.env.NODE_ENV === 'development') return cb();
-            const howStrong = strength(password);
-            cb(howStrong < 3 ? new Error('Password not strong enough') : null);
-          }
-        },
         google: {
           clientID: process.env.GOOGLE_CLIENT_ID,
           clientSecret: process.env.GOOGLE_CLIENT_SECRET,
