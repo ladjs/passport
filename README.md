@@ -1,13 +1,13 @@
-# auth
+# passport
 
-[![build status](https://img.shields.io/travis/ladjs/auth.svg)](https://travis-ci.org/ladjs/auth)
-[![code coverage](https://img.shields.io/codecov/c/github/ladjs/auth.svg)](https://codecov.io/gh/ladjs/auth)
+[![build status](https://img.shields.io/travis/ladjs/passport.svg)](https://travis-ci.org/ladjs/passport)
+[![code coverage](https://img.shields.io/codecov/c/github/ladjs/passport.svg)](https://codecov.io/gh/ladjs/passport)
 [![code style](https://img.shields.io/badge/code_style-XO-5ed9c7.svg)](https://github.com/sindresorhus/xo)
 [![styled with prettier](https://img.shields.io/badge/styled_with-prettier-ff69b4.svg)](https://github.com/prettier/prettier)
 [![made with lass](https://img.shields.io/badge/made_with-lass-95CC28.svg)](https://lass.js.org)
-[![license](https://img.shields.io/github/license/ladjs/auth.svg)](LICENSE)
+[![license](https://img.shields.io/github/license/ladjs/passport.svg)](LICENSE)
 
-> Auth for Lad
+> Passport for Lad
 
 
 ## Table of Contents
@@ -24,20 +24,20 @@
 [npm][]:
 
 ```sh
-npm install @ladjs/auth
+npm install @ladjs/passport
 ```
 
 [yarn][]:
 
 ```sh
-yarn add @ladjs/auth
+yarn add @ladjs/passport
 ```
 
 
 ## Usage
 
 ```js
-const Auth = require('@ladjs/auth');
+const Passport = require('@ladjs/passport');
 const koa = require('koa');
 const mongoose = require('mongoose');
 const passportLocalMongoose = require('passport-local-mongoose');
@@ -48,13 +48,13 @@ User.plugin(passportLocalMongoose, {
 });
 const Users = mongoose.model('User', UserSchema);
 
-const auth = new Auth(Users, {
+const passporth = new Passport(Users, {
   // ...
 });
 
 const app = new Koa();
-app.use(auth.passport.initialize());
-app.use(auth.passport.session());
+app.use(passport.initialize());
+app.use(passport.session());
 ```
 
 
