@@ -48,7 +48,7 @@ User.plugin(passportLocalMongoose, {
 });
 const Users = mongoose.model('User', UserSchema);
 
-const passporth = new Passport(Users, {
+const passport = new Passport(Users, {
   // ...
 });
 
@@ -75,7 +75,7 @@ See [index.js](index.js) for configuration defaults and environment flags.
 [MIT](LICENSE) © [Nick Baugh](http://niftylettuce.com/)
 
 
-## 
+##
 
 [npm]: https://www.npmjs.com/
 
