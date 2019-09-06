@@ -62,6 +62,8 @@ app.use(passport.session());
 
 See [index.js](index.js) for configuration defaults and environment flags.
 
+You can customize the field names, see the `fields` object in [index.js](index.js).
+
 
 ## Contributors
 

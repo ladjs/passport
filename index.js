@@ -60,8 +60,19 @@ function Passport(Users, config) {
         'https://www.googleapis.com/auth/userinfo.email',
         'https://www.googleapis.com/auth/userinfo.profile'
       ]
+    },
+    fields: {
+      displayName: 'display_name',
+      givenName: 'given_name',
+      familyName: 'family_name',
+      avatarURL: 'avatar_url',
+      googleProfileID: 'google_profile_id',
+      googleAccessToken: 'google_access_token',
+      googleRefreshToken: 'google_refresh_token'
     }
   });
+
+  const { fields } = config;
 
   passport.serializeUser(config.serializeUser);
   passport.deserializeUser(config.deserializeUser);
@@ -81,8 +92,9 @@ function Passport(Users, config) {
 
             if (user) {
               // store the access token and refresh token
-              if (accessToken) user.set('google_access_token', accessToken);
-              if (refreshToken) user.set('google_refresh_token', refreshToken);
+              if (accessToken) user.set(fields.googleAccessToken, accessToken);
+              if (refreshToken)
+                user.set(fields.googleRefreshToken, refreshToken);
               user = await user.save();
             } else {
               // there is still a bug that doesn't let us revoke tokens
@@ -92,23 +104,22 @@ function Passport(Users, config) {
               // with `prompt=consent` specified (this rarely happens)
               if (!refreshToken) return done(new Error('Consent required'));
 
-              const obj = {
-                email,
-                display_name: profile.displayName,
-                given_name: profile.name.givenName,
-                family_name: profile.name.familyName,
-                google_profile_id: profile.id,
-                google_access_token: accessToken,
-                google_refresh_token: refreshToken
-              };
+              const obj = { email };
+              obj[fields.displayName] = profile.displayName;
+              obj[fields.givenName] = profile.name.givenName;
+              obj[fields.familyName] = profile.name.familyName;
+              obj[fields.googleProfileID] = profile.id;
+              obj[fields.googleAccessToken] = accessToken;
+              obj[fields.googleRefreshToken] = refreshToken;
 
               if (
                 _.isObject(profile._json.image) &&
                 _.isString(profile._json.image.url)
               ) {
-                obj.avatar_url = profile._json.image.url;
                 // we don't want ?sz= in the image URL
-                obj.avatar_url = obj.avatar_url.split('?sz=')[0];
+                obj[fields.avatarURL] = profile._json.image.url.split(
+                  '?sz='
+                )[0];
               }
 
               user = await Users.create(obj);
