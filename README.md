@@ -77,7 +77,7 @@ You can customize the field names, see the `fields` object in [index.js](index.j
 [MIT](LICENSE) © [Nick Baugh](http://niftylettuce.com/)
 
 
-##
+## 
 
 [npm]: https://www.npmjs.com/
 
