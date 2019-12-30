@@ -1,4 +1,6 @@
+const crypto = require('crypto');
 const GitHubStrategy = require('passport-github').Strategy;
+const OtpStrategy = require('passport-otp-strategy').Strategy;
 const _ = require('lodash');
 const boolean = require('boolean');
 const passport = require('koa-passport');
@@ -27,7 +29,8 @@ function Passport(Users, config) {
     providers: {
       local: boolean(process.env.AUTH_LOCAL_ENABLED),
       google: boolean(process.env.AUTH_GOOGLE_ENABLED),
-      github: boolean(process.env.AUTH_GITHUB_ENABLED)
+      github: boolean(process.env.AUTH_GITHUB_ENABLED),
+      otp: boolean(process.env.AUTH_OTP_ENABLED)
     },
     strategies: {
       google: {
@@ -39,6 +42,9 @@ function Passport(Users, config) {
         clientID: process.env.GITHUB_CLIENT_ID,
         clientSecret: process.env.GITHUB_CLIENT_SECRET,
         callbackURL: process.env.GITHUB_CALLBACK_URL
+      },
+      otp: {
+        codeField: process.env.OTP_CODE_FIELD || 'passcode'
       }
     },
     google: {
@@ -63,6 +69,9 @@ function Passport(Users, config) {
       githubProfileID: 'github_profile_id',
       githubAccessToken: 'github_access_token',
       githubRefreshToken: 'github_refresh_token'
+    },
+    userFields: {
+      twoFactorEnabled: 'two_factor_enabled'
     }
   });
 
@@ -160,6 +169,46 @@ function Passport(Users, config) {
         }
       )
     );
+
+  if (config.providers.otp) {
+    const { codeField } = config.strategies.otp;
+
+    // validate first factor auth enabled
+    const enabledFirstFactor = Object.keys(config.providers).filter(
+      provider => {
+        return (
+          (provider !== 'otp' && config.providers[provider] === 'true') ||
+          config.providers[provider] === true
+        );
+      }
+    );
+
+    if (_.isEmpty(enabledFirstFactor)) {
+      throw new Error('No first factor authentication strategy enabled');
+    }
+
+    passport.use(
+      new OtpStrategy(
+        {
+          codeField,
+          authenticator: {
+            crypto,
+            step: 30
+          }
+        },
+        function(user, done) {
+          // we already have the user object from initial login
+          if (!user.two_factor_token) {
+            return done(
+              new Error('`two_factor_token` does not exist for OTP validation')
+            );
+          }
+
+          done(null, user.two_factor_token);
+        }
+      )
+    );
+  }
 
   return passport;
 }
