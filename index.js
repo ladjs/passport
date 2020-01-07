@@ -1,9 +1,12 @@
+const crypto = require('crypto');
+
 const GitHubStrategy = require('passport-github').Strategy;
+const OtpStrategy = require('passport-otp-strategy').Strategy;
 const _ = require('lodash');
-const boolean = require('boolean');
 const passport = require('koa-passport');
 const validator = require('validator');
 const { OAuth2Strategy } = require('passport-google-oauth');
+const { boolean } = require('boolean');
 
 function Passport(Users, config) {
   if (!_.isObject(Users)) throw new Error('Users object not defined');
@@ -27,7 +30,8 @@ function Passport(Users, config) {
     providers: {
       local: boolean(process.env.AUTH_LOCAL_ENABLED),
       google: boolean(process.env.AUTH_GOOGLE_ENABLED),
-      github: boolean(process.env.AUTH_GITHUB_ENABLED)
+      github: boolean(process.env.AUTH_GITHUB_ENABLED),
+      otp: boolean(process.env.AUTH_OTP_ENABLED)
     },
     strategies: {
       google: {
@@ -39,6 +43,15 @@ function Passport(Users, config) {
         clientID: process.env.GITHUB_CLIENT_ID,
         clientSecret: process.env.GITHUB_CLIENT_SECRET,
         callbackURL: process.env.GITHUB_CALLBACK_URL
+      },
+      otp: {
+        codeField: process.env.OTP_CODE_FIELD || 'passcode',
+        // `authenticator` options passed through to `otplib`
+        // <https://github.com/yeojz/otplib>
+        authenticator: {
+          crypto,
+          step: 30
+        }
       }
     },
     google: {
@@ -63,6 +76,10 @@ function Passport(Users, config) {
       githubProfileID: 'github_profile_id',
       githubAccessToken: 'github_access_token',
       githubRefreshToken: 'github_refresh_token'
+    },
+    userFields: {
+      twoFactorToken: 'two_factor_token',
+      twoFactorEnabled: 'two_factor_enabled'
     }
   });
 
@@ -160,6 +177,37 @@ function Passport(Users, config) {
         }
       )
     );
+
+  if (config.providers.otp) {
+    // validate first factor auth enabled
+    const enabledFirstFactor = Object.keys(config.providers).filter(
+      provider => {
+        return (
+          (provider !== 'otp' && config.providers[provider] === 'true') ||
+          config.providers[provider] === true
+        );
+      }
+    );
+
+    if (enabledFirstFactor.length === 0)
+      throw new Error('No first factor authentication strategy enabled');
+
+    passport.use(
+      new OtpStrategy(config.strategies.otp, function(user, done) {
+        // if two factor is not enabled
+        if (!user[config.userFields.twoFactorEnabled])
+          return done(new Error('Two-factor authentication is not enabled'));
+
+        // we already have the user object from initial login
+        if (!user[config.userFields.twoFactorToken])
+          return done(
+            new Error('Two-factor token does not exist for validation')
+          );
+
+        done(null, user[config.userFields.twoFactorToken]);
+      })
+    );
+  }
 
   return passport;
 }
