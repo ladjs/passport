@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 
-const GitHubStrategy = require('passport-github').Strategy;
+const GitHubStrategy = require('passport-github2').Strategy;
 const OtpStrategy = require('passport-otp-strategy').Strategy;
 const _ = require('lodash');
 const passport = require('koa-passport');
@@ -56,7 +56,7 @@ function Passport(Users, config) {
     },
     google: {
       accessType: 'offline',
-      approvalPrompt: 'force',
+      prompt: 'consent',
       scope: [
         'https://www.googleapis.com/auth/userinfo.email',
         'https://www.googleapis.com/auth/userinfo.profile'
