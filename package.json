@@ -1,7 +1,7 @@
 {
   "name": "@ladjs/passport",
   "description": "Passport for Lad",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "author": "Nick Baugh <niftylettuce@gmail.com> (http://niftylettuce.com/)",
   "ava": {
     "failFast": true,
