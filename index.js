@@ -76,9 +76,7 @@ function Passport(Users, config) {
       googleRefreshToken: 'google_refresh_token',
       githubProfileID: 'github_profile_id',
       githubAccessToken: 'github_access_token',
-      githubRefreshToken: 'github_refresh_token'
-    },
-    userFields: {
+      githubRefreshToken: 'github_refresh_token',
       twoFactorToken: 'two_factor_token',
       twoFactorEnabled: 'two_factor_enabled'
     }
@@ -196,16 +194,16 @@ function Passport(Users, config) {
     passport.use(
       new OtpStrategy(config.strategies.otp, function(user, done) {
         // if two factor is not enabled
-        if (!user[config.userFields.twoFactorEnabled])
+        if (!user[fields.twoFactorEnabled])
           return done(new Error('Two-factor authentication is not enabled'));
 
         // we already have the user object from initial login
-        if (!user[config.userFields.twoFactorToken])
+        if (!user[fields.twoFactorToken])
           return done(
             new Error('Two-factor token does not exist for validation')
           );
 
-        done(null, user[config.userFields.twoFactorToken]);
+        done(null, user[fields.twoFactorToken]);
       })
     );
   }
