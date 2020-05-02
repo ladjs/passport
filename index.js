@@ -77,8 +77,8 @@ function Passport(Users, config) {
       githubProfileID: 'github_profile_id',
       githubAccessToken: 'github_access_token',
       githubRefreshToken: 'github_refresh_token',
-      twoFactorToken: 'two_factor_token',
-      twoFactorEnabled: 'two_factor_enabled'
+      otpToken: 'otp_token',
+      otpEnabled: 'otp_enabled'
     }
   });
 
@@ -193,17 +193,15 @@ function Passport(Users, config) {
 
     passport.use(
       new OtpStrategy(config.strategies.otp, function(user, done) {
-        // if two factor is not enabled
-        if (!user[fields.twoFactorEnabled])
-          return done(new Error('Two-factor authentication is not enabled'));
+        // if otp is not enabled
+        if (!user[fields.otpEnabled])
+          return done(new Error('OTP authentication is not enabled'));
 
         // we already have the user object from initial login
-        if (!user[fields.twoFactorToken])
-          return done(
-            new Error('Two-factor token does not exist for validation')
-          );
+        if (!user[fields.otpToken])
+          return done(new Error('OTP token does not exist for validation'));
 
-        done(null, user[fields.twoFactorToken]);
+        done(null, user[fields.otpToken]);
       })
     );
   }
