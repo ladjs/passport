@@ -13,11 +13,11 @@ function Passport(Users, config) {
 
   config = _.defaultsDeep(config, {
     serializeUser: (user, done) => {
-      done(null, user.email);
+      done(null, user.id);
     },
-    deserializeUser: async (email, done) => {
+    deserializeUser: async (id, done) => {
       try {
-        const user = await Users.findOne({ email });
+        const user = await Users.findOne({ id });
         // if no user exists then invalidate the previous session
         // <https://github.com/jaredhanson/passport/issues/6#issuecomment-4857287>
         if (!user) return done(null, false);
