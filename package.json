@@ -19,7 +19,8 @@
   },
   "contributors": [
     "Nick Baugh <niftylettuce@gmail.com> (http://niftylettuce.com/)",
-    "Shaun Warman <shaunwarman1@gmail.com> (https://shaunwarman.com/)"
+    "Shaun Warman <shaunwarman1@gmail.com> (https://shaunwarman.com/)",
+    "shadowgate15 (https://github.com/shadowgate15)"
   ],
   "dependencies": {
     "boolean": "^3.0.0",

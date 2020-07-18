@@ -67,10 +67,11 @@ You can customize the field names, see the `fields` object in [index.js](index.j
 
 ## Contributors
 
-| Name             | Website                    |
-| ---------------- | -------------------------- |
-| **Nick Baugh**   | <http://niftylettuce.com/> |
-| **Shaun Warman** | <https://shaunwarman.com/> |
+| Name             | Website                           |
+| ---------------- | --------------------------------- |
+| **Nick Baugh**   | <http://niftylettuce.com/>        |
+| **Shaun Warman** | <https://shaunwarman.com/>        |
+| **shadowgate15** | <https://github.com/shadowgate15> |
 
 
 ## License
