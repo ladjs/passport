@@ -188,7 +188,7 @@ function Passport(Users, config) {
       }
     );
 
-    if (enabledFirstFactor.length === 0)
+    if (enabledFirstFactor.length <= 1)
       throw new Error('No first factor authentication strategy enabled');
 
     passport.use(
