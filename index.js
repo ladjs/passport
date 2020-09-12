@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 
 const GitHubStrategy = require('passport-github2').Strategy;
-const OtpStrategy = require('passport-otp-strategy').Strategy;
+const OtpStrategy = require('@ladjs/passport-otp-strategy').Strategy;
 const _ = require('lodash');
 const passport = require('koa-passport');
 const validator = require('validator');
@@ -51,7 +51,9 @@ function Passport(Users, config) {
         // <https://github.com/yeojz/otplib>
         authenticator: {
           crypto,
-          step: 30
+          step: 30,
+          // allow last and current totp passcode
+          window: 1
         }
       }
     },
