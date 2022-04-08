@@ -3613,10 +3613,10 @@ kind-of@^6.0.0, kind-of@^6.0.2:
   resolved "https://registry.yarnpkg.com/kind-of/-/kind-of-6.0.2.tgz#01146b36a6218e64e58f3a8d66de5d7fc6f6d051"
   integrity sha512-s5kLOcnH0XqDO+FvuaLX8DDjZ18CGFk7VygH40QoKPUQhW4e2rvM0rwUq0t8IQDOwYSeLK01U90OjzBTme2QqA==
 
-koa-passport@^4.1.3:
-  version "4.1.3"
-  resolved "https://registry.yarnpkg.com/koa-passport/-/koa-passport-4.1.3.tgz#6e8eaa48290457af1539bcbed3c52d9defc029c9"
-  integrity sha512-QqKrHfp4jNfqkKThGkVb2WQtlVOSRYk5CC69Z17cmOpZ4760l8CdyJ+Bs2CfQc9BHizz557mczjPkSlVkpuluw==
+koa-passport@^4.1.4:
+  version "4.1.4"
+  resolved "https://registry.yarnpkg.com/koa-passport/-/koa-passport-4.1.4.tgz#5f1665c1c2a37ace79af9f970b770885ca30ccfa"
+  integrity sha512-dJBCkl4X+zdYxbI2V2OtoGy0PUenpvp2ZLLWObc8UJhsId0iQpTFT8RVcuA0709AL2txGwRHnSPoT1bYNGa6Kg==
   dependencies:
     passport "^0.4.0"
 
