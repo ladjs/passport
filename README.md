@@ -1,4 +1,4 @@
-# passport
+# @ladjs/passport
 
 [![build status](https://img.shields.io/travis/ladjs/passport.svg)](https://travis-ci.org/ladjs/passport)
 [![code coverage](https://img.shields.io/codecov/c/github/ladjs/passport.svg)](https://codecov.io/gh/ladjs/passport)
@@ -79,7 +79,7 @@ You can customize the field names, see the `fields` object in [index.js](index.j
 [MIT](LICENSE) © [Nick Baugh](http://niftylettuce.com/)
 
 
-## 
+##
 
 [npm]: https://www.npmjs.com/
 

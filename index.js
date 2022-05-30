@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const process = require('process');
 
 const GitHubStrategy = require('passport-github2').Strategy;
 const OtpStrategy = require('@ladjs/passport-otp-strategy').Strategy;
@@ -12,10 +13,10 @@ function Passport(Users, config) {
   if (!_.isObject(Users)) throw new Error('Users object not defined');
 
   config = _.defaultsDeep(config, {
-    serializeUser: (user, done) => {
+    serializeUser(user, done) {
       done(null, user.id);
     },
-    deserializeUser: async (id, done) => {
+    async deserializeUser(id, done) {
       try {
         const user = await Users.findOne({ id });
         // if no user exists then invalidate the previous session
@@ -102,10 +103,10 @@ function Passport(Users, config) {
 
             let user = await Users.findOne({ email });
             if (!user) user = new Users({ email });
-            ['displayName', 'givenName', 'familyName'].forEach(key => {
+            for (const key of ['displayName', 'givenName', 'familyName']) {
               if (!user[fields[key]] && profile[key])
                 user[fields[key]] = profile[key];
-            });
+            }
 
             user[fields.githubProfileID] = profile.id;
             user[fields.githubAccessToken] = accessToken;
@@ -142,10 +143,10 @@ function Passport(Users, config) {
 
             let user = await Users.findOne({ email });
             if (!user) user = new Users({ email });
-            ['displayName', 'givenName', 'familyName'].forEach(key => {
+            for (const key of ['displayName', 'givenName', 'familyName']) {
               if (!user[fields[key]] && profile[key])
                 user[fields[key]] = profile[key];
-            });
+            }
 
             user[fields.googleProfileID] = profile.id;
             user[fields.googleAccessToken] = accessToken;
@@ -182,7 +183,7 @@ function Passport(Users, config) {
   if (config.providers.otp) {
     // validate first factor auth enabled
     const enabledFirstFactor = Object.keys(config.providers).filter(
-      provider => {
+      (provider) => {
         return (
           (provider !== 'otp' && config.providers[provider] === 'true') ||
           config.providers[provider] === true
@@ -194,7 +195,7 @@ function Passport(Users, config) {
       throw new Error('No first factor authentication strategy enabled');
 
     passport.use(
-      new OtpStrategy(config.strategies.otp, function(user, done) {
+      new OtpStrategy(config.strategies.otp, function (user, done) {
         // if otp is not enabled
         if (!user[fields.otpEnabled])
           return done(new Error('OTP authentication is not enabled'));

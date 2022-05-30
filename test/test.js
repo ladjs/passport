@@ -11,19 +11,19 @@ test.beforeEach(() => {
   Passport = require('..');
 });
 
-test('errors if Users is not an object', t => {
+test('errors if Users is not an object', (t) => {
   t.throws(() => new Passport(null, {}), {
     message: 'Users object not defined'
   });
 });
 
-test('creates passport object with no configs', t => {
+test('creates passport object with no configs', (t) => {
   const pass = new Passport({}, {});
 
   t.is(typeof pass, 'object');
 });
 
-test('serializeUser > returns user.id', t => {
+test('serializeUser > returns user.id', (t) => {
   t.plan(2);
 
   const pass = new Passport({}, {});
@@ -34,12 +34,12 @@ test('serializeUser > returns user.id', t => {
   });
 });
 
-test('deserializeUser > returns user', async t => {
+test('deserializeUser > returns user', async (t) => {
   t.plan(2);
 
   const user = { id: '1' };
   const Users = {
-    findOne: async () => new Promise(resolve => resolve(user))
+    findOne: () => Promise.resolve(user)
   };
 
   const pass = new Passport(Users, {});
@@ -50,7 +50,7 @@ test('deserializeUser > returns user', async t => {
   });
 });
 
-test('deserializeUser > returns error', async t => {
+test('deserializeUser > returns error', async (t) => {
   t.plan(2);
 
   const pass = new Passport({}, {});
@@ -61,11 +61,11 @@ test('deserializeUser > returns error', async t => {
   });
 });
 
-test('deserializeUser > errors if no user', async t => {
+test('deserializeUser > errors if no user', async (t) => {
   t.plan(2);
 
   const Users = {
-    findOne: async () => new Promise(resolve => resolve(false))
+    findOne: () => Promise.resolve(false)
   };
 
   const pass = new Passport(Users, {});
@@ -76,10 +76,10 @@ test('deserializeUser > errors if no user', async t => {
   });
 });
 
-test('create local strategy', t => {
+test('create local strategy', (t) => {
   const Users = {
     createStrategy: () =>
-      new LocalStrategy(function(username, password, done) {
+      new LocalStrategy(function (username, password, done) {
         done(null, true);
       })
   };
@@ -91,21 +91,19 @@ test('create local strategy', t => {
   t.is(typeof pass._strategies.local, 'object');
 });
 
-test('test github strategy', async t => {
+test('test github strategy', async (t) => {
   t.plan(14);
 
-  const toObject = function() {
+  const toObject = function () {
     return this;
   };
 
   let Users = {
-    findOne: async () =>
-      new Promise(resolve =>
-        resolve({
-          save: async () => new Promise(resolve => resolve()),
-          toObject
-        })
-      )
+    findOne: () =>
+      Promise.resolve({
+        save: () => Promise.resolve(),
+        toObject
+      })
   };
 
   let pass = new Passport(Users, {
@@ -141,15 +139,15 @@ test('test github strategy', async t => {
     }
   );
 
-  Users = function() {
+  Users = function () {
     return {
       avatar_url: 'http://www.example.com',
-      save: async () => new Promise(resolve => resolve()),
+      save: () => Promise.resolve(),
       toObject
     };
   };
 
-  Users.findOne = async () => new Promise(resolve => resolve());
+  Users.findOne = () => Promise.resolve();
 
   pass = new Passport(Users, {
     providers: { github: true },
@@ -184,21 +182,15 @@ test('test github strategy', async t => {
   });
 });
 
-test.serial('test google strategy', async t => {
+test.serial('test google strategy', async (t) => {
   t.plan(17);
 
-  const toObject = function() {
+  const toObject = function () {
     return this;
   };
 
   let Users = {
-    findOne: async () =>
-      new Promise(resolve =>
-        resolve({
-          save: async () => new Promise(resolve => resolve()),
-          toObject
-        })
-      )
+    findOne: () => Promise.resolve({ save: () => Promise.resolve(), toObject })
   };
 
   let pass = new Passport(Users, {
@@ -257,15 +249,15 @@ test.serial('test google strategy', async t => {
     }
   );
 
-  Users = function() {
+  Users = function () {
     return {
       avatar_url: 'www.example.com',
-      save: async () => new Promise(resolve => resolve()),
+      save: () => Promise.resolve(),
       toObject
     };
   };
 
-  Users.findOne = async () => new Promise(resolve => resolve());
+  Users.findOne = () => Promise.resolve();
 
   pass = new Passport(Users, {
     providers: { google: true },
@@ -300,7 +292,7 @@ test.serial('test google strategy', async t => {
   });
 });
 
-test('test otp strategy', t => {
+test('test otp strategy', (t) => {
   t.plan(7);
 
   t.throws(() => new Passport({}, { providers: { otp: true } }), {
