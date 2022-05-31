@@ -1,20 +1,29 @@
-const test = require('ava');
-const decache = require('decache');
-
 const LocalStrategy = require('passport-local');
+const test = require('ava');
+const { KoaPassport } = require('koa-passport');
 
-let Passport = require('..');
-
-test.beforeEach(() => {
-  decache('koa-passport');
-  decache('..');
-  Passport = require('..');
-});
+const Passport = require('..');
 
 test('errors if Users is not an object', (t) => {
   t.throws(() => new Passport(null, {}), {
     message: 'Users object not defined'
   });
+});
+
+test('exposes config object', (t) => {
+  const pass = new Passport({});
+  t.true(pass instanceof KoaPassport);
+  t.is(typeof pass.config, 'object');
+  t.is(typeof pass.config.serializeUser, 'function');
+  t.is(typeof pass.config.deserializeUser, 'function');
+  t.is(typeof pass.serializeUser, 'function');
+  t.is(typeof pass.deserializeUser, 'function');
+  t.is(typeof pass.use, 'function');
+  t.is(typeof pass.config.providers, 'object');
+  t.is(typeof pass.config.strategies, 'object');
+  t.is(typeof pass.config.google, 'object');
+  t.is(typeof pass.config.github, 'object');
+  t.is(typeof pass.config.fields, 'object');
 });
 
 test('creates passport object with no configs', (t) => {
