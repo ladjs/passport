@@ -10,7 +10,7 @@ const { OAuth2Strategy } = require('passport-google-oauth');
 const { boolean } = require('boolean');
 
 class Passport extends KoaPassport {
-  constructor(Users, config) {
+  constructor(Users, config = {}) {
     super();
 
     if (!_.isObject(Users)) throw new Error('Users object not defined');
