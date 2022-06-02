@@ -14,6 +14,7 @@
 
 * [Install](#install)
 * [Usage](#usage)
+* [Strategies](#strategies)
 * [Options](#options)
 * [Contributors](#contributors)
 * [License](#license)
@@ -48,9 +49,7 @@ User.plugin(passportLocalMongoose, {
 });
 const Users = mongoose.model('User', UserSchema);
 
-const passport = new Passport(Users, {
-  // ...
-});
+const passport = new Passport({}, Users);
 
 const app = new Koa();
 app.use(passport.initialize());
@@ -58,11 +57,22 @@ app.use(passport.session());
 ```
 
 
+## Strategies
+
+Currently supported strategies:
+
+* Local (email)
+* Apple (Sign in with Apple)
+* GitHub
+* Google
+* OTP
+
+
 ## Options
 
 See [index.js](index.js) for configuration defaults and environment flags.
 
-You can customize the field names, see the `fields` object in [index.js](index.js).
+You can customize the field names and phrases, see the `fields` and `phrases` objects in [index.js](index.js).
 
 
 ## Contributors

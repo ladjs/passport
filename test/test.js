@@ -1,333 +1,503 @@
 const LocalStrategy = require('passport-local');
 const test = require('ava');
 const { KoaPassport } = require('koa-passport');
+const mongoose = require('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 
 const Passport = require('..');
 
-test('errors if Users is not an object', (t) => {
-  t.throws(() => new Passport(null, {}), {
-    message: 'Users object not defined'
-  });
+const obj = {};
+for (const value of Object.values(Passport.DEFAULT_FIELDS)) {
+  obj[value] = String;
+}
+
+const User = new mongoose.Schema({
+  id: String,
+  email: String,
+  ...obj
+});
+
+User.pre('validate', function (next) {
+  this.id = this._id.toString();
+  next();
+});
+
+const Users = mongoose.model('User', User);
+const server = new MongoMemoryServer();
+
+test.before(async () => {
+  await server.start();
+  await mongoose.connect(server.getUri());
+});
+
+test.after(async () => {
+  await server.stop();
 });
 
 test('exposes config object', (t) => {
-  const pass = new Passport({});
-  t.true(pass instanceof KoaPassport);
-  t.is(typeof pass.config, 'object');
-  t.is(typeof pass.config.serializeUser, 'function');
-  t.is(typeof pass.config.deserializeUser, 'function');
-  t.is(typeof pass.serializeUser, 'function');
-  t.is(typeof pass.deserializeUser, 'function');
-  t.is(typeof pass.use, 'function');
-  t.is(typeof pass.config.providers, 'object');
-  t.is(typeof pass.config.strategies, 'object');
-  t.is(typeof pass.config.google, 'object');
-  t.is(typeof pass.config.github, 'object');
-  t.is(typeof pass.config.fields, 'object');
+  const passport = new Passport({}, Users);
+  t.true(passport instanceof KoaPassport);
+  t.is(typeof passport.config, 'object');
+  t.is(typeof passport.serializeUser, 'function');
+  t.is(typeof passport.deserializeUser, 'function');
+  t.is(typeof passport.use, 'function');
+  t.is(typeof passport.config.providers, 'object');
+  t.is(typeof passport.config.strategies, 'object');
+  t.is(typeof passport.config.strategies.apple, 'object');
+  t.is(typeof passport.config.strategies.google, 'object');
+  t.is(typeof passport.config.strategies.github, 'object');
+  t.is(typeof passport.config.strategies.otp, 'object');
+  t.is(typeof passport.config.fields, 'object');
+  t.is(typeof passport.config.phrases, 'object');
 });
 
 test('creates passport object with no configs', (t) => {
-  const pass = new Passport({}, {});
-
-  t.is(typeof pass, 'object');
+  const passport = new Passport();
+  t.is(typeof passport, 'object');
 });
 
-test('serializeUser > returns user.id', (t) => {
-  t.plan(2);
+test('serializeUser > returns user.id', async (t) => {
+  const passport = new Passport({}, Users);
 
-  const pass = new Passport({}, {});
-
-  pass.serializeUser({ id: '1' }, (err, id) => {
-    t.is(err, null);
-    t.is(id, '1');
+  const id = await new Promise((resolve, reject) => {
+    passport.serializeUser({ id: '1' }, (err, id) => {
+      if (err) return reject(err);
+      resolve(id);
+    });
   });
+  t.is(id, '1');
 });
 
 test('deserializeUser > returns user', async (t) => {
-  t.plan(2);
+  const user = await Users.create({});
 
-  const user = { id: '1' };
-  const Users = {
-    findOne: () => Promise.resolve(user)
-  };
+  const passport = new Passport({}, Users);
 
-  const pass = new Passport(Users, {});
-
-  await pass.deserializeUser('1', (err, ret) => {
-    t.is(err, null);
-    t.is(ret, user);
+  const result = await new Promise((resolve, reject) => {
+    passport.deserializeUser(user.id, (err, result) => {
+      if (err) return reject(err);
+      resolve(result);
+    });
   });
+  t.deepEqual(result.toObject(), user.toObject());
 });
 
 test('deserializeUser > returns error', async (t) => {
-  t.plan(2);
+  const passport = new Passport(
+    {},
+    {
+      findOne(query, fn) {
+        fn(new Error('Oops!'));
+      }
+    }
+  );
 
-  const pass = new Passport({}, {});
-
-  await pass.deserializeUser('1', (err, user) => {
-    t.is(typeof err, 'object');
-    t.is(typeof user, 'undefined');
-  });
+  const err = await t.throwsAsync(
+    new Promise((resolve, reject) => {
+      passport.deserializeUser(null, (err, user) => {
+        if (err) return reject(err);
+        resolve(user);
+      });
+    })
+  );
+  t.is(err.message, 'Oops!');
 });
 
-test('deserializeUser > errors if no user', async (t) => {
-  t.plan(2);
+test('deserializeUser > returns false if no user', async (t) => {
+  const passport = new Passport({}, Users);
 
-  const Users = {
-    findOne: () => Promise.resolve(false)
-  };
-
-  const pass = new Passport(Users, {});
-
-  await pass.deserializeUser('1', (err, ret) => {
-    t.is(err, null);
-    t.is(ret, false);
+  const result = await new Promise((resolve, reject) => {
+    passport.deserializeUser('1', (err, ret) => {
+      if (err) return reject(err);
+      resolve(ret);
+    });
   });
+  t.is(result, false);
 });
 
 test('create local strategy', (t) => {
-  const Users = {
-    createStrategy: () =>
-      new LocalStrategy(function (username, password, done) {
-        done(null, true);
-      })
+  Users.createStrategy = () => {
+    return new LocalStrategy(function (username, password, done) {
+      done(null, true);
+    });
   };
 
-  const pass = new Passport(Users, {
-    providers: { local: true }
-  });
+  const passport = new Passport(
+    {
+      providers: { local: true }
+    },
+    Users
+  );
 
-  t.is(typeof pass._strategies.local, 'object');
+  t.is(typeof passport._strategies.local, 'object');
+});
+
+test('create local strategy throws error if method missing', (t) => {
+  const err = t.throws(() => {
+    return new Passport(
+      {
+        providers: { local: true }
+      },
+      {
+        findOne() {}
+      }
+    );
+  });
+  t.regex(err.message, /method is missing/);
+});
+
+test('test apple strategy', async (t) => {
+  let passport = new Passport(
+    {
+      providers: { apple: true },
+      strategies: {
+        apple: {
+          clientID: 'test',
+          teamID: 'test',
+          keyID: 'test',
+          key: 'test',
+          clientSecret: 'thisSecret',
+          callbackURL: 'localhost'
+        }
+      }
+    },
+    Users
+  );
+
+  t.is(typeof passport._strategies.apple, 'object');
+
+  {
+    const user = await new Promise((resolve, reject) => {
+      passport._strategies.apple._verify(
+        null,
+        null,
+        {
+          id: '3',
+          email: 'test-apple@apple.com',
+          name: {
+            firstName: 'jack',
+            lastName: 'frost'
+          }
+        },
+        (err, user) => {
+          if (err) return reject(err);
+          resolve(user);
+        }
+      );
+    });
+
+    t.is(typeof user, 'object');
+    t.is(user.email, 'test-apple@apple.com');
+    t.is(user.given_name, 'jack');
+    t.is(user.family_name, 'frost');
+  }
+
+  passport = new Passport(
+    {
+      providers: { apple: true },
+      strategies: {
+        apple: {
+          clientID: 'test',
+          teamID: 'test',
+          keyID: 'test',
+          key: 'test',
+          clientSecret: 'thisSecret',
+          callbackURL: 'localhost'
+        }
+      }
+    },
+    Users
+  );
+
+  {
+    const user = await new Promise((resolve, reject) => {
+      passport._strategies.apple._verify(
+        'access',
+        'refresh',
+        {
+          id: '4',
+          email: 'test-1@example.com'
+        },
+        (err, user) => {
+          if (err) return reject(err);
+          resolve(user);
+        }
+      );
+    });
+    t.is(typeof user, 'object');
+    t.is(user.apple_profile_id, '4');
+    t.is(user.apple_access_token, 'access');
+    t.is(user.apple_refresh_token, 'refresh');
+  }
+
+  const err = await t.throwsAsync(
+    new Promise((resolve, reject) => {
+      passport._strategies.apple._verify(null, null, null, (err, user) => {
+        if (err) return reject(err);
+        resolve(user);
+      });
+    })
+  );
+  t.is(err.message, passport.config.phrases.INVALID_PROFILE_RESPONSE);
 });
 
 test('test github strategy', async (t) => {
-  t.plan(14);
-
-  const toObject = function () {
-    return this;
-  };
-
-  let Users = {
-    findOne: () =>
-      Promise.resolve({
-        save: () => Promise.resolve(),
-        toObject
-      })
-  };
-
-  let pass = new Passport(Users, {
-    providers: { github: true },
-    strategies: {
-      github: {
-        clientID: 'test',
-        clientSecret: 'thisSecret',
-        callbackURL: 'localhost'
-      }
-    }
-  });
-
-  t.is(typeof pass._strategies.github, 'object');
-
-  await pass._strategies.github._verify(
-    null,
-    null,
+  let passport = new Passport(
     {
-      emails: [{ value: 'test' }],
-      displayName: 'robert',
-      givenName: 'frost',
-      familyName: 'jack',
-      photos: [{ value: 'http://www.example.com' }]
+      providers: { github: true },
+      strategies: {
+        github: {
+          clientID: 'test',
+          clientSecret: 'thisSecret',
+          callbackURL: 'localhost'
+        }
+      }
     },
-    (err, user) => {
-      t.is(err, null);
-      t.is(typeof user, 'object');
-      t.is(user.display_name, 'robert');
-      t.is(user.given_name, 'frost');
-      t.is(user.family_name, 'jack');
-      t.is(user.avatar_url, 'http://www.example.com');
-    }
+    Users
   );
 
-  Users = function () {
-    return {
-      avatar_url: 'http://www.example.com',
-      save: () => Promise.resolve(),
-      toObject
-    };
-  };
+  t.is(typeof passport._strategies.github, 'object');
 
-  Users.findOne = () => Promise.resolve();
+  {
+    const user = await new Promise((resolve, reject) => {
+      passport._strategies.github._verify(
+        null,
+        null,
+        {
+          id: '3',
+          emails: [{ value: 'test-github@github.com' }],
+          displayName: 'robert',
+          givenName: 'frost',
+          familyName: 'jack',
+          photos: [{ value: 'http://www.example.com' }]
+        },
+        (err, user) => {
+          if (err) return reject(err);
+          resolve(user);
+        }
+      );
+    });
 
-  pass = new Passport(Users, {
-    providers: { github: true },
-    strategies: {
-      github: {
-        clientID: 'test',
-        clientSecret: 'thisSecret',
-        callbackURL: 'localhost'
-      }
-    }
-  });
+    t.is(typeof user, 'object');
+    t.is(user.email, 'test-github@github.com');
+    t.is(user.display_name, 'robert');
+    t.is(user.given_name, 'frost');
+    t.is(user.family_name, 'jack');
+    t.is(user.avatar_url, 'http://www.example.com');
+  }
 
-  await pass._strategies.github._verify(
-    'access',
-    'refresh',
+  passport = new Passport(
     {
-      id: 'id',
-      emails: [{ value: 'test@example.com' }]
+      providers: { github: true },
+      strategies: {
+        github: {
+          clientID: 'test',
+          clientSecret: 'thisSecret',
+          callbackURL: 'localhost'
+        }
+      }
     },
-    (err, user) => {
-      t.is(err, null);
-      t.is(typeof user, 'object');
-      t.is(user.github_profile_id, 'id');
-      t.is(user.github_access_token, 'access');
-      t.is(user.github_refresh_token, 'refresh');
-    }
+    Users
   );
 
-  await pass._strategies.github._verify(null, null, null, (err, user) => {
-    t.is(typeof err, 'object');
-    t.is(typeof user, 'undefined');
-  });
+  {
+    const user = await new Promise((resolve, reject) => {
+      passport._strategies.github._verify(
+        'access',
+        'refresh',
+        {
+          id: '4',
+          emails: [{ value: 'test-1@example.com' }]
+        },
+        (err, user) => {
+          if (err) return reject(err);
+          resolve(user);
+        }
+      );
+    });
+    t.is(typeof user, 'object');
+    t.is(user.github_profile_id, '4');
+    t.is(user.github_access_token, 'access');
+    t.is(user.github_refresh_token, 'refresh');
+  }
+
+  const err = await t.throwsAsync(
+    new Promise((resolve, reject) => {
+      passport._strategies.github._verify(null, null, null, (err, user) => {
+        if (err) return reject(err);
+        resolve(user);
+      });
+    })
+  );
+  t.is(err.message, passport.config.phrases.INVALID_PROFILE_RESPONSE);
 });
 
 test.serial('test google strategy', async (t) => {
-  t.plan(17);
-
-  const toObject = function () {
-    return this;
-  };
-
-  let Users = {
-    findOne: () => Promise.resolve({ save: () => Promise.resolve(), toObject })
-  };
-
-  let pass = new Passport(Users, {
-    providers: { google: true },
-    strategies: {
-      google: {
-        clientID: 'test',
-        clientSecret: 'thisSecret',
-        callbackURL: 'localhost'
-      }
-    }
-  });
-
-  t.is(typeof pass._strategies.google, 'object');
-
-  await pass._strategies.google._verify(
-    null,
-    false,
+  let passport = new Passport(
     {
-      emails: [{ value: 'test@example.com' }],
-      _json: {
-        image: {
-          url: 'www.example.com'
+      providers: { google: true },
+      strategies: {
+        google: {
+          clientID: 'test',
+          clientSecret: 'thisSecret',
+          callbackURL: 'localhost'
         }
       }
     },
-    (err, user) => {
-      t.is(err.message, 'Consent required');
-      t.is(typeof user, 'undefined');
-    }
+    Users
   );
 
-  await pass._strategies.google._verify(
-    null,
-    'refresh',
-    {
-      id: '1',
-      emails: [{ value: 'test@example.com' }],
-      _json: {
-        image: {
-          url: 'www.example.com?sz=test'
+  t.is(typeof passport._strategies.google, 'object');
+
+  {
+    const err = await t.throwsAsync(
+      new Promise((resolve, reject) => {
+        passport._strategies.google._verify(
+          null,
+          false,
+          {
+            id: '5',
+            emails: [{ value: 'test-2@example.com' }],
+            _json: {
+              image: {
+                url: 'www.example.com'
+              }
+            }
+          },
+          (err, user) => {
+            if (err) return reject(err);
+            resolve(user);
+          }
+        );
+      })
+    );
+    t.is(err.message, passport.config.phrases.CONSENT_REQUIRED);
+    t.true(err.consent_required);
+  }
+
+  {
+    const user = await new Promise((resolve, reject) => {
+      passport._strategies.google._verify(
+        null,
+        'refresh',
+        {
+          id: '1',
+          emails: [{ value: 'test-3@example.com' }],
+          _json: {
+            image: {
+              url: 'www.example.com?sz=test'
+            }
+          },
+          displayName: 'lord_byron',
+          givenName: 'lord',
+          familyName: 'byron'
+        },
+        (err, user) => {
+          if (err) return reject(err);
+          resolve(user);
         }
-      },
-      displayName: 'lord_byron',
-      givenName: 'lord',
-      familyName: 'byron'
-    },
-    (err, user) => {
-      t.is(err, null);
-      t.is(typeof user, 'object');
-      t.is(user.google_profile_id, '1');
-      t.is(user.display_name, 'lord_byron');
-      t.is(user.given_name, 'lord');
-      t.is(user.family_name, 'byron');
-      t.is(user.avatar_url, 'www.example.com');
-    }
-  );
+      );
+    });
+    t.is(typeof user, 'object');
+    t.is(user.google_profile_id, '1');
+    t.is(user.display_name, 'lord_byron');
+    t.is(user.given_name, 'lord');
+    t.is(user.family_name, 'byron');
+    t.is(user.avatar_url, 'www.example.com');
+  }
 
-  Users = function () {
-    return {
-      avatar_url: 'www.example.com',
-      save: () => Promise.resolve(),
-      toObject
-    };
-  };
-
-  Users.findOne = () => Promise.resolve();
-
-  pass = new Passport(Users, {
-    providers: { google: true },
-    strategies: {
-      google: {
-        clientID: 'test',
-        clientSecret: 'thisSecret',
-        callbackURL: 'localhost'
-      }
-    }
-  });
-
-  await pass._strategies.google._verify(
-    'access',
-    'refresh',
+  passport = new Passport(
     {
-      id: 'id',
-      emails: [{ value: 'test@example.com' }]
+      providers: { google: true },
+      strategies: {
+        google: {
+          clientID: 'test',
+          clientSecret: 'thisSecret',
+          callbackURL: 'localhost'
+        }
+      }
     },
-    (err, user) => {
-      t.is(err, null);
-      t.is(typeof user, 'object');
-      t.is(user.google_profile_id, 'id');
-      t.is(user.google_access_token, 'access');
-      t.is(user.google_refresh_token, 'refresh');
-    }
+    Users
   );
 
-  await pass._strategies.google._verify(null, null, null, (err, user) => {
-    t.is(typeof err, 'object');
-    t.is(typeof user, 'undefined');
-  });
+  {
+    const user = await new Promise((resolve, reject) => {
+      passport._strategies.google._verify(
+        'access',
+        'refresh',
+        {
+          id: '7',
+          emails: [{ value: 'test-4@example.com' }]
+        },
+        (err, user) => {
+          if (err) return reject(err);
+          resolve(user);
+        }
+      );
+    });
+    t.is(typeof user, 'object');
+    t.is(user.google_profile_id, '7');
+    t.is(user.google_access_token, 'access');
+    t.is(user.google_refresh_token, 'refresh');
+  }
+
+  {
+    const err = await t.throwsAsync(
+      new Promise((resolve, reject) => {
+        passport._strategies.google._verify(null, null, null, (err, user) => {
+          if (err) return reject(err);
+          resolve(user);
+        });
+      })
+    );
+    t.is(err.message, passport.config.phrases.INVALID_PROFILE_RESPONSE);
+  }
 });
 
-test('test otp strategy', (t) => {
-  t.plan(7);
-
-  t.throws(() => new Passport({}, { providers: { otp: true } }), {
+test('test otp strategy', async (t) => {
+  t.throws(() => new Passport({ providers: { otp: true } }), {
     message: 'No first factor authentication strategy enabled'
   });
 
-  const pass = new Passport({}, { providers: { otp: true, local: true } });
+  const passport = new Passport({ providers: { otp: true, local: true } });
 
-  pass._strategies.otp._setup({ otp_enabled: false }, (err, user) => {
-    t.is(err.message, 'OTP authentication is not enabled');
-    t.is(typeof user, 'undefined');
-  });
+  {
+    const err = await t.throwsAsync(
+      new Promise((resolve, reject) => {
+        passport._strategies.otp._setup({ otp_enabled: false }, (err, user) => {
+          if (err) return reject(err);
+          resolve(user);
+        });
+      })
+    );
+    t.is(err.message, 'OTP authentication is not enabled.');
+  }
 
-  pass._strategies.otp._setup(
-    { otp_enabled: true, otp_token: false },
-    (err, user) => {
-      t.is(err.message, 'OTP token does not exist for validation');
-      t.is(typeof user, 'undefined');
-    }
-  );
+  {
+    const err = await t.throwsAsync(
+      new Promise((resolve, reject) => {
+        passport._strategies.otp._setup(
+          { otp_enabled: true, otp_token: false },
+          (err, user) => {
+            if (err) return reject(err);
+            resolve(user);
+          }
+        );
+      })
+    );
+    t.is(err.message, 'OTP token does not exist for validation.');
+  }
 
-  pass._strategies.otp._setup(
-    { otp_enabled: true, otp_token: '1' },
-    (err, otpToken) => {
-      t.is(err, null);
-      t.is(otpToken, '1');
-    }
-  );
+  {
+    const otpToken = await new Promise((resolve, reject) => {
+      passport._strategies.otp._setup(
+        { otp_enabled: true, otp_token: '1' },
+        (err, otpToken) => {
+          if (err) return reject(err);
+          resolve(otpToken);
+        }
+      );
+    });
+    t.is(otpToken, '1');
+  }
 });
