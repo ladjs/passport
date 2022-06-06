@@ -160,13 +160,9 @@ class Passport extends KoaPassport {
     if (this.config.providers.otp) {
       // validate first factor auth enabled
       const enabledFirstFactor = Object.keys(this.config.providers).filter(
-        (provider) => {
-          return (
-            (provider !== 'otp' &&
-              this.config.providers[provider] === 'true') ||
-            this.config.providers[provider] === true
-          );
-        }
+        (provider) =>
+          (provider !== 'otp' && this.config.providers[provider] === 'true') ||
+          this.config.providers[provider] === true
       );
 
       if (enabledFirstFactor.length <= 1)
