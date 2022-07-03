@@ -13,6 +13,8 @@ const { KoaPassport } = require('koa-passport');
 const { boolean } = require('boolean');
 
 const PASSPORT_FIELDS = {
+  lastLoginField: 'last_login_at',
+
   displayName: 'display_name',
   givenName: 'given_name',
   familyName: 'family_name',
@@ -392,6 +394,12 @@ class Passport extends KoaPassport {
     if (user[this.config.fields[`${provider}ProfileID`]] !== profile.id) {
       save = true;
       user[this.config.fields[`${provider}ProfileID`]] = profile.id;
+    }
+
+    // update the last login for the user (matches passport-local-mongoose behavior)
+    if (this.config.fields.lastLoginField) {
+      save = true;
+      user[this.config.fields.lastLoginField] = new Date();
     }
 
     //
