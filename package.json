@@ -14,7 +14,7 @@
   ],
   "dependencies": {
     "@ladjs/passport-otp-strategy": "^2.0.1",
-    "@nicokaiser/passport-apple": "^1.0.1",
+    "@nicokaiser/passport-apple": "^2.0.0",
     "boolean": "^3.2.0",
     "is-string-and-not-blank": "^0.0.2",
     "koa-passport": "^4.1.4",
