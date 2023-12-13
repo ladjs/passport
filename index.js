@@ -1,16 +1,21 @@
-const crypto = require('crypto');
-const fs = require('fs');
-const process = require('process');
+const crypto = require('node:crypto');
+const fs = require('node:fs');
+const process = require('node:process');
 
 const AppleStrategy = require('@nicokaiser/passport-apple').Strategy;
 const GitHubStrategy = require('passport-github2').Strategy;
 const GoogleStrategy = require('passport-google-oauth20');
 const OtpStrategy = require('@ladjs/passport-otp-strategy').Strategy;
+const WebAuthnStrategy = require('passport-fido2-webauthn');
 const _ = require('lodash');
 const isSANB = require('is-string-and-not-blank');
 const validator = require('validator');
 const { KoaPassport } = require('koa-passport');
 const { boolean } = require('boolean');
+
+const { SessionChallengeStore } = WebAuthnStrategy;
+
+const store = new SessionChallengeStore();
 
 const PASSPORT_FIELDS = {
   lastLoginField: 'last_login_at',
@@ -47,7 +52,8 @@ const PASSPORT_PHRASES = {
   CONSENT_REQUIRED:
     'Offline access consent required to generate a new refresh token.',
   OTP_NOT_ENABLED: 'OTP authentication is not enabled.',
-  OTP_TOKEN_DOES_NOT_EXIST: 'OTP token does not exist for validation.'
+  OTP_TOKEN_DOES_NOT_EXIST: 'OTP token does not exist for validation.',
+  INVALID_WEBAUTHN_KEY: 'Invalid WebAuthn key.'
 };
 
 class Passport extends KoaPassport {
@@ -64,7 +70,8 @@ class Passport extends KoaPassport {
         apple: boolean(process.env.AUTH_APPLE_ENABLED),
         google: boolean(process.env.AUTH_GOOGLE_ENABLED),
         github: boolean(process.env.AUTH_GITHUB_ENABLED),
-        otp: boolean(process.env.AUTH_OTP_ENABLED)
+        otp: boolean(process.env.AUTH_OTP_ENABLED),
+        webauthn: boolean(process.env.AUTH_WEBAUTHN_ENABLED)
       },
       strategies: {
         apple: {
@@ -102,6 +109,11 @@ class Passport extends KoaPassport {
             // allow last and current totp passcode
             window: 1
           }
+        },
+        webauthn: {
+          store
+          // <https://github.com/jaredhanson/passport-webauthn/pull/4>
+          // passReqToCallback: true
         }
       },
       fields: PASSPORT_FIELDS,
@@ -118,7 +130,7 @@ class Passport extends KoaPassport {
           if (err) return done(err);
           // if no user exists then invalidate the previous session
           // <https://github.com/jaredhanson/passport/issues/6#issuecomment-4857287>
-          done(null, user ? user : false);
+          done(null, user || false);
         });
       });
 
@@ -154,6 +166,56 @@ class Passport extends KoaPassport {
           new GoogleStrategy(
             this.config.strategies.google,
             this.loginOrCreateProfile(Users, 'google')
+          )
+        );
+
+      // webauthn
+      if (this.config.providers.webauthn)
+        this.use(
+          new WebAuthnStrategy(
+            this.config.strategies.webauthn,
+            (credentialId, userHandle, done) => {
+              Users.findOne(
+                {
+                  'passkeys.credentialId': credentialId
+                },
+                (err, user) => {
+                  if (err) return done(err);
+                  if (!user)
+                    return done(
+                      new Error(this.config.phrases.INVALID_WEBAUTHN_KEY)
+                    );
+                  if (
+                    !Array.isArray(user.passkeys) ||
+                    user.passkeys.length === 0
+                  )
+                    return done(
+                      new Error(this.config.phrases.INVALID_WEBAUTHN_KEY)
+                    );
+                  const match = user.passkeys.find(
+                    (p) => p.credentialId === credentialId
+                  );
+                  if (!match)
+                    return done(
+                      new Error(this.config.phrases.INVALID_WEBAUTHN_KEY)
+                    );
+                  // if (Buffer.compare(Buffer.from(user.id), userHandle) !== 0)
+                  if (user.id !== userHandle.toString('base64'))
+                    return done(
+                      new Error(this.config.phrases.INVALID_WEBAUTHN_KEY)
+                    );
+                  done(null, user.toObject(), match.publicKey);
+                }
+              );
+            },
+            //
+            // NOTE: note we don't allow creation without a user
+            //       (unlike passport-fido2-webauthn default example)
+            //
+            (user, id, publicKey, done) => {
+              return done(new Error(this.config.phrases.INVALID_WEBAUTHN_KEY));
+              // done(null, user.toObject());
+            }
           )
         );
     }
