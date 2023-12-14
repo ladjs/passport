@@ -13,13 +13,13 @@
     "shadowgate15 (https://github.com/shadowgate15)"
   ],
   "dependencies": {
+    "@forwardemail/passport-fido2-webauthn": "^0.1.0",
     "@ladjs/passport-otp-strategy": "^2.0.1",
     "@nicokaiser/passport-apple": "^1.0.1",
     "boolean": "^3.2.0",
     "is-string-and-not-blank": "^0.0.2",
     "koa-passport": "^4.1.4",
     "lodash": "^4.17.21",
-    "@forwardemail/passport-fido2-webauthn": "^0.1.0",
     "passport-github2": "^0.1.12",
     "passport-google-oauth20": "^2.0.0",
     "validator": "^13.11.0"
