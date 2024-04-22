@@ -158,12 +158,13 @@ class Passport extends KoaPassport {
       // <https://gitlab.com/theopenstore/passport-ubuntu>
       //
       //
-      this.use(
-        new UbuntuStrategy(
-          this.config.strategies.ubuntu,
-          this.loginOrCreateProfile(Users, 'ubuntu')
-        )
-      );
+      if (this.config.providers.ubuntu)
+        this.use(
+          new UbuntuStrategy(
+            this.config.strategies.ubuntu,
+            this.loginOrCreateProfile(Users, 'ubuntu')
+          )
+        );
 
       // apple
       if (this.config.providers.apple)
