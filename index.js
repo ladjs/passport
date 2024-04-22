@@ -5,6 +5,7 @@ const process = require('node:process');
 const AppleStrategy = require('@nicokaiser/passport-apple').Strategy;
 const GitHubStrategy = require('passport-github2').Strategy;
 const GoogleStrategy = require('passport-google-oauth20');
+const UbuntuStrategy = require('passport-ubuntu').Strategy;
 const OtpStrategy = require('@ladjs/passport-otp-strategy').Strategy;
 const WebAuthnStrategy = require('@forwardemail/passport-fido2-webauthn');
 const _ = require('lodash');
@@ -36,6 +37,9 @@ const PASSPORT_FIELDS = {
   githubProfileID: 'github_profile_id',
   githubAccessToken: 'github_access_token',
   githubRefreshToken: 'github_refresh_token',
+  // ubuntu
+  ubuntuProfileID: 'ubuntu_profile_id',
+  ubuntuUsername: 'ubuntu_username',
   // otp
   otpToken: 'otp_token',
   otpEnabled: 'otp_enabled'
@@ -71,7 +75,8 @@ class Passport extends KoaPassport {
         google: boolean(process.env.AUTH_GOOGLE_ENABLED),
         github: boolean(process.env.AUTH_GITHUB_ENABLED),
         otp: boolean(process.env.AUTH_OTP_ENABLED),
-        webauthn: boolean(process.env.AUTH_WEBAUTHN_ENABLED)
+        webauthn: boolean(process.env.AUTH_WEBAUTHN_ENABLED),
+        ubuntu: boolean(process.env.AUTH_UBUNTU_ENABLED)
       },
       strategies: {
         apple: {
@@ -114,6 +119,11 @@ class Passport extends KoaPassport {
           store
           // <https://github.com/jaredhanson/passport-webauthn/pull/4>
           // passReqToCallback: true
+        },
+        ubuntu: {
+          returnURL: process.env.UBUNTU_CALLBACK_URL,
+          realm: process.env.UBUNTU_REALM,
+          stateless: true
         }
       },
       fields: PASSPORT_FIELDS,
@@ -141,6 +151,19 @@ class Passport extends KoaPassport {
           );
         this.use(Users.createStrategy());
       }
+
+      //
+      // ubuntu (openid)
+      // <https://help.ubuntu.com/community/SSO/OpenID%20integration>
+      // <https://gitlab.com/theopenstore/passport-ubuntu>
+      //
+      //
+      this.use(
+        new UbuntuStrategy(
+          this.config.strategies.ubuntu,
+          this.loginOrCreateProfile(Users, 'ubuntu')
+        )
+      );
 
       // apple
       if (this.config.providers.apple)
@@ -267,6 +290,18 @@ class Passport extends KoaPassport {
 
   loginOrCreateProfile(Users, provider) {
     return (accessToken, refreshToken, profile, done) => {
+      if (provider === 'ubuntu') {
+        profile = refreshToken;
+        if (_.isObject(profile) && isSANB(profile.claimedIdentifier))
+          profile.id = profile.claimedIdentifier;
+        if (_.isArray(profile.fullname) && isSANB(profile.fullname[0]))
+          profile.displayName = profile.fullname[0];
+        accessToken = null;
+        refreshToken = null;
+        if (!_.isArray(profile.nickname) || !isSANB(profile.nickname[0]))
+          return done(new Error(this.config.phrases.INVALID_PROFILE_ID));
+      }
+
       if (!_.isObject(profile))
         return done(new Error(this.config.phrases.INVALID_PROFILE_RESPONSE));
 
@@ -382,6 +417,14 @@ class Passport extends KoaPassport {
             user[this.config.fields[key]] = profile[key];
         }
 
+        // ubuntu
+        if (
+          provider === 'ubuntu' &&
+          _.isArray(profile.nickname) &&
+          isSANB(profile.nickname[0])
+        )
+          user[this.config.fields.ubuntuUsername] = profile.nickname[0];
+
         //
         // google photo
         // (we don't want to override values if they were already set though)
@@ -432,6 +475,17 @@ class Passport extends KoaPassport {
     if (!user.email && email) {
       save = true;
       user.email = email;
+    }
+
+    // if ubuntu then update nickname if not set already
+    if (
+      provider === 'ubuntu' &&
+      _.isArray(profile.nickname) &&
+      isSANB(profile.nickname[0]) &&
+      profile.nickname[0] !== user[this.config.fields.ubuntuUsername]
+    ) {
+      save = true;
+      user[this.config.fields.ubuntuUsername] = profile.nickname[0];
     }
 
     // update or set access token
