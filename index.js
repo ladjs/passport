@@ -301,6 +301,9 @@ class Passport extends KoaPassport {
         refreshToken = null;
         if (!_.isArray(profile.nickname) || !isSANB(profile.nickname[0]))
           return done(new Error(this.config.phrases.INVALID_PROFILE_ID));
+        // helper alias to re-use existing function which has plural form
+        if (_.isArray(profile.email) && !_.isEmpty(profile.email))
+          profile.emails = profile.email;
       }
 
       if (!_.isObject(profile))
