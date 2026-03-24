@@ -543,8 +543,14 @@ class Passport extends KoaPassport {
     if (!save) {
       //
       // support google consent issue
+      // (only require consent if no refresh token was provided AND
+      //  the user does not already have one stored in the database)
       //
-      if (provider === 'google' && !isSANB(refreshToken)) {
+      if (
+        provider === 'google' &&
+        !isSANB(refreshToken) &&
+        !isSANB(user[this.config.fields.googleRefreshToken])
+      ) {
         const err = new Error(this.config.phrases.CONSENT_REQUIRED);
         err.consent_required = true;
         return done(err);
@@ -562,8 +568,14 @@ class Passport extends KoaPassport {
 
       //
       // support google consent issue
+      // (only require consent if no refresh token was provided AND
+      //  the user does not already have one stored in the database)
       //
-      if (provider === 'google' && !isSANB(refreshToken)) {
+      if (
+        provider === 'google' &&
+        !isSANB(refreshToken) &&
+        !isSANB(user[this.config.fields.googleRefreshToken])
+      ) {
         const err = new Error(this.config.phrases.CONSENT_REQUIRED);
         err.consent_required = true;
         return done(err);
